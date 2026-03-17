@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d//**)",
+      "Read(//c/Users/Admin/AppData/Local/Programs/Python/Python310/Lib/site-packages/livekit/plugins/simli/**)",
+      "Bash(powershell.exe -Command \"Compress-Archive -Path ''D:\\\\kassel-voice-avatar'' -DestinationPath ''D:\\\\kassel-project.zip'' -Force\")"
+    ],
+    "additionalDirectories": [
+      "D:\\"
+    ]
+  }
+}

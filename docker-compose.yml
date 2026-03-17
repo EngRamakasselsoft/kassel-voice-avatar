@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # ── Self-hosted LiveKit Server ──────────────────────────
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"          # WebSocket
+      - "7881:7881/tcp"      # RTC TCP
+      - "50000-50100:50000-50100/udp"  # RTC UDP (subset for dev)
+    volumes:
+      - ./config/livekit.yaml:/etc/livekit.yaml
+    command: --config /etc/livekit.yaml --dev
+    environment:
+      - LIVEKIT_KEYS=devkey:secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7880/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── LiveKit Agent (Python) ──────────────────────────────
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile.agent
+    depends_on:
+      livekit:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - LIVEKIT_URL=ws://livekit:7880
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  # ── Token Server ────────────────────────────────────────
+  token-server:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile.agent
+    command: python token_server.py
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - livekit
+
+  # ── Frontend (React) ────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_LIVEKIT_URL=ws://localhost:7880
+      - VITE_TOKEN_SERVER=http://localhost:8080
+    depends_on:
+      - livekit
+      - token-server
+
+volumes:
+  logs:
